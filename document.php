@@ -1,9 +1,19 @@
 <?php
-include('doc.php');
+include('connectlogin.php');
 
 // Error message array to collect any validation errors
 $error_msg = [];
+$privileges = isset($_POST["privileges"]) ? $_POST["privileges"] : [];
+$privilege = implode(",", $privileges); // Join selected privileges into a string
+// At the top of your PHP file
 
+var_dump($_SESSION['privileges']); // Check what privileges are actually in the session
+
+// Where you check for the privilege
+$canAddDocs = hasPrivilege('Add docs');
+var_dump($canAddDocs); // Check if this returns true or false
+// Save the privileges to session or process as needed
+$_SESSION['privileges'] = explode(",", $privilege); 
 // Check if form was submitted
 if (isset($_POST["submit"])) {
     $pseudo = $_POST["pseudo"];
@@ -34,7 +44,7 @@ if (isset($_POST["submit"])) {
 
     // Handle privileges selection
     $privileges = isset($_POST["privileges"]) ? $_POST["privileges"] : [];
-    $privilege = implode(",", $privileges);
+    $privilege = implode(",", $privileges); // Join selected privileges into a string
 
     // Check if a picture was uploaded
     if (isset($_FILES["picture"]["name"]) && !empty($_FILES["picture"]["name"])) {
@@ -46,7 +56,7 @@ if (isset($_POST["submit"])) {
         if (move_uploaded_file($_FILES["picture"]["tmp_name"], $folder)) {
             echo "File uploaded successfully to: " . $folder;
         } else {
-            $error_msg['picture'] = "Failed to upload picture. Check folder permissions.";
+            $error_msg['picture'] = "Failed to upload picture. Check folder privilges.";
         }
     } else {
         $error_msg['picture'] = "Profile picture is required";
@@ -63,16 +73,25 @@ if (isset($_POST["submit"])) {
             if ($stmt->execute()) {
                 echo "<script>alert('Data inserted successfully');</script>";
             } else {
+                // Enhanced error logging
                 echo "<script>alert('Data not inserted');</script>";
-                echo "Error: " . $stmt->error;
+                echo "SQL Error: " . $stmt->error;
             }
+            
             $stmt->close();
         } else {
             echo "Error preparing SQL: " . $conn->error;
         }
+    } else {
+        // Display error messages if there are validation issues
+        foreach ($error_msg as $error) {
+            echo "<p style='color: red;'>$error</p>";
+        }
     }
 }
-
+function hasPrivilege($privilege) {
+    return isset($_SESSION['user_privileges']) && in_array($privilege, $_SESSION['user_privileges']);
+}
 // Fetch the data for display
 $result = mysqli_query($conn, "SELECT * FROM nouna");
 
@@ -83,49 +102,71 @@ $result = mysqli_query($conn, "SELECT * FROM nouna");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <title>aero</title>
+    <title>User Management</title>
 </head>
 <body class="bg-dark">
-<aside style="width: 100; padding-left: 15px; float: right; margin-right: 0%; margin-left: 50px; background-color: lightgray; position: relative; top: 50px;">
-    <div class="form_validation">
-        <div class="error_msg">
-            <?php
-            // Display validation errors
-            foreach ($error_msg as $error) {
-                echo "<p style='color: red;'>$error</p>";
-            }
-            ?>
+<?php
+session_start(); // Start the session
+$current_user_email = $_SESSION['user_email'] ?? null; 
+
+// Debugging line to see the current email
+echo "Current user email: " . htmlspecialchars($current_user_email);
+// Check if the user is logged in and has the correct email
+if ($current_user_email === 'admin@gmail.com') {
+    ?>
+    <aside style="width: 100; padding-left: 15px; float: right; margin-right: 0%; margin-left: 50px; background-color: lightgray; position: relative; top: 50px;">
+        <div class="form_validation">
+            <div class="error_msg">
+                <?php
+                // Display validation errors
+                foreach ($error_msg as $error) {
+                    echo "<p style='color: red;'>$error</p>";
+                }
+                ?>
+            </div>
+            <form action="" method="post" autocomplete="off" style="height: 100%;" enctype="multipart/form-data">
+                <label for=""><h2>Add users</h2></label><hr>
+                <label for="">Pseudo:</label><br>
+                <input type="text" name="pseudo" placeholder="user_name" style="margin: 10px; margin-left: 50px;" required><br/><br/>
+                <label for="">Fonction:</label><br>
+                <input type="text" name="fonction" placeholder="fonction" style="margin: 10px; margin-left: 50px;" required><br/><br/>
+                <label for="">Service/Section:</label><br>
+                <select name="services" required><br/><br/>
+                    <option value="Select service" selected hidden>Select service</option><br>
+                    <option value="agent d'embarquement">agent d'embarquement</option><br>
+                    <option value="agent de securite">agent de securite</option><br><br>
+                    <option value="agent d'assistance aux passagers">agent d'assistance aux passagers</option><br>
+                    <option value="service technique navigation">service technique navigation</option><br>
+                    <option value="section controle aerien">section controle aerien</option><br>
+                </select><br/><br/>
+                <label for="">Password:</label><br/><br/>
+                <input type="password" name="password" placeholder="password" style="margin: 10px; margin-left: 50px;" required><br/><br/>
+                <label for="">Confirm Password:</label><br/><br/>
+                <input type="password" name="passwd" placeholder="password" style="margin: 10px; margin-left: 50px;" required><br/><br/>
+                
+                <label>
+                    <input type="checkbox" name="privileges[]" value="Download docs" <?php if (hasPrivilege('Download docs')) echo 'checked'; ?>> Download Docs
+                </label><br>
+                <label>
+                    <input type="checkbox" name="privileges[]" value="Add docs" <?php if (hasPrivilege('Add docs')) echo 'checked'; ?>> Add Docs
+                </label><br>
+                <label>
+                    <input type="checkbox" name="privileges[]" value="Delete docs" <?php if (hasPrivilege('Delete docs')) echo 'checked'; ?>> Delete Docs
+                </label><br>
+
+                <label for="">Profile pic:</label><br/><br/>
+                <input type="file" name="picture" style="margin-top: 10px; margin-bottom: 10px;" required accept="image/png, image/jpeg"><br/><br/>
+                <button type="submit" style="margin-top: 10px; margin-bottom: 4px;" name="submit">Add user</button>
+            </form>
         </div>
-        <form action="" method="post" autocomplete="off" style="height: 100%;" enctype="multipart/form-data">
-            <label for=""><h2>Add users</h2></label><hr>
-            <label for="">Pseudo:</label><br>
-            <input type="text" name="pseudo" placeholder="user_name" style="margin: 10px; margin-left: 50px;" required><br/><br/>
-            <label for="">Fonction:</label><br>
-            <input type="text" name="fonction" placeholder="fonction" style="margin: 10px; margin-left: 50px;" required><br/><br/>
-            <label for="">Service/Section:</label><br>
-            <select name="services" required><br/><br/>
-                <option value="Select service" selected hidden>Select service</option><br>
-                <option value="agent d'embarquement">agent d'embarquement</option><br>
-                <option value="agent de securite">agent de securite</option><br><br>
-                <option value="agent d'assistance aux passagers">agent d'assistance aux passagers</option><br>
-                <option value="service technique navigation">service technique navigation</option><br>
-                <option value="section controle aerien">section controle aerien</option><br>
-            </select><br/><br/>
-            <label for="">Password:</label><br/><br/>
-            <input type="password" name="password" placeholder="password" style="margin: 10px; margin-left: 50px;" required><br/><br/>
-            <label for="">Confirm Password:</label><br/><br/>
-            <input type="password" name="passwd" placeholder="password" style="margin: 10px; margin-left: 50px;" required><br/><br/>
-            <label for="" style="margin: 10px;">Privilege:</label><br/><br/>
-            <input type="checkbox" style="margin-top: 10px;" name="privileges[]" value="Download docs">Download docs<br/><br/>
-            <input type="checkbox" style="margin-top: 10px;" name="privileges[]" value="Add docs">Add docs<br/><br/>
-            <input type="checkbox" style="margin-top: 10px;" name="privileges[]" value="delete docs">Delete docs<br/><br/>
-            <input type="checkbox" style="margin-top: 10px; margin-bottom: 10px;" name="privileges[]" value="Access to all docs">Access to all docs<br/><br/>
-            <label for="">Profile pic:</label><br/><br/>
-            <input type="file" name="picture" style="margin-top: 10px; margin-bottom: 10px;" required accept="image/png, image/jpeg"><br/><br/>
-            <button type="submit" style="margin-top: 10px; margin-bottom: 4px;" name="submit">Add user</button>
-        </form>
-    </div>
-</aside>
+    </aside>
+    <?php
+} else {
+    // Optional: Message for unauthorized access
+    echo "<p style='color: red;'>You do not have permission to access this page.</p>";
+}
+?>
+
 <div class="container">
     <div class="row mt-5">
         <div class="col">
@@ -134,9 +175,9 @@ $result = mysqli_query($conn, "SELECT * FROM nouna");
                     <h2 class="display-6 text-center">Users Management</h2>
                 </div>
                 <div class="card-body">
-                    <table class="table table-bordered text-center">
+                    <table class="table table-bordered text-center" style="width: 100%;">
                         <thead class="bg-dark text-white">
-                            <tr>
+                            <tr style=" width: auto;">
                                 <th>Pseudo</th>
                                 <th>Fonction</th>
                                 <th>Section</th>

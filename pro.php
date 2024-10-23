@@ -13,27 +13,27 @@
         </div>
         <ul class="nav-list">
             <li class="nav-item">
-            <a href="document.php" target="Fenêtre définie" class="dropdown-btn">Administrateur</a>
+            <a href="document.php" target="_self" class="dropdown-btn">Administrateur</a>
             <li class="nav-item">
                 <a href="#" >Essaouira AIRPORT
                     <span class="caret"></span>
                 </a>
             </li>
             <li class="nav-item">
-                <a href="2_sitedocuments.php" target="Fenêtre définie">Documents <span class="badge">0 new</span></a>
+                <a href="2_sitedocuments.php" target="_self">Documents <span class="badge">0 new</span></a>
             </li>
             <li class="nav-item">
                 <a href="#">Stocks</a>
             </li>
             <li class="nav-item">
-                <a href="http://localhost/project/mail/mail/sent.php" target="Fenêtre définie">Mail</a>
+                <a href="http://localhost/project/mail/mail/sent.php" target="_self">Mail</a>
             </li>
         </ul>
     </div>
 <div style="top:0;color:white; background-color:#2c3e50;padding-left:256px;padding-top:1px"><h1>MOGADOR AIRPORT</h1></div>
     <div class="full-screen-bg" style="background-image:url('https://exploreessaouira.com/wp-content/uploads/2022/12/Essaouira-Airport-1-728x546.jpg.webp'); position: absolute;
   top:65px;
-  left:90px; /* adjust to sidebar width */
+  left:94px; /* adjust to sidebar width */
   width: calc(100% - 250px); /* adjust to sidebar width */
   height: 100vh;
   background-size: cover 300px 100px;
@@ -88,12 +88,38 @@ On entering the building, your passport will be checked.
             <ul style="list-style: none;
   padding: 0;
   margin: 0;">
-              <a  style="margin:30px" href="pdf_maker2.php?&ACTION=DOWNLOAD" class="btn btn-success"><i class="fa fa-file-pdf-o"></i> CARTE D'APPROCHE</a> &nbsp;&nbsp;
-              <br><br><br><a style="margin:30px" href="pdf_maker2.php?&ACTION=DOWNLOAD" class="btn btn-success"><i class="fa fa-file-pdf-o"></i> CARTE D'AERODROME</a> &nbsp;&nbsp;
-              <br><br>
-              <a style="margin:30px"  href="pdf_maker2.php?&ACTION=DOWNLOAD" class="btn btn-success"><i class="fa fa-file-pdf-o"></i> AIP AIROPORT</a> &nbsp;&nbsp;
-            </ul>
-          </aside>
+  <?php      
+  require ("connectlogin.php");   
+        // Fetch documents again to display in the aside section
+        $display_query = "SELECT id, titre, document FROM docs";
+        $results = mysqli_query($conn, $display_query);
+        
+        if ($results) {
+            $count = mysqli_num_rows($results);
+            if ($count > 0) {
+                while ($data_row = mysqli_fetch_array($results, MYSQLI_ASSOC)) {
+                    // Debugging line to see what $data_row contains
+                    
+                    ?>
+                    <li >
+                        <a href="<?php echo $data_row['document']; ?>" class="btn btn-danger" download> <img src="pdf1.png" alt="" style="width:40px;height:40px;
+    margin-right: 10px; ">
+                            <i class="fa fa-download" style="color:black;text-decoration:none;"> <?php echo $data_row['titre']; ?></i>
+                        </a>
+                        
+                    </li>
+                    <?php
+                }
+            } else {
+                echo "<li>No documents found</li>";
+            }
+        } else {
+            echo "Error: " . mysqli_error($conn);
+        }
+        
+        ?>
+    </ul>
+    </aside>
 </body>
 </html>
 

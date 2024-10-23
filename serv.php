@@ -1,21 +1,42 @@
-<?php include('connectlogin.php');
+
+<?php
+include('connectlogin.php'); // Include database connection
+session_start(); // Start the session
+
+$error_message = ""; // Initialize the error message variable
+
 if (isset($_POST['submit'])) {
-    $username = $_POST['user'];
-    $password = $_POST['pass'];
+    $username = $_POST['email'];
+    $password = $_POST['password'];
 
-    $sql = "select * from users where username = '$username' and password = '$password'";  
-    $result = mysqli_query($conn, $sql);  
-    $row = mysqli_fetch_array($result, MYSQLI_ASSOC);  
-    $count = mysqli_num_rows($result);  
+    // Use prepared statements to prevent SQL injection
+    $sql = "SELECT * FROM users WHERE email = ?";  
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $username); // Bind the parameter
+    $stmt->execute();
+    $result = $stmt->get_result();  
+    $count = $result->num_rows;  
 
-    if($count == 1){  
-        header("Location: pro.php");
-    }  
-    else{  
-        echo  '<script>
-                    window.location.href = "index.php";
-                    alert("Login failed. Invalid username or password!!")
-                </script>';
-    }     
+    if ($count > 0) {
+        $user = $result->fetch_assoc(); // Fetch user data
+
+        // Directly compare passwords (Not secure!)
+        if ($password === $user['password']) {
+            // Password is correct
+            $_SESSION['user_id'] = $user['id']; // Store user ID
+            $_SESSION['user_email'] = $user['email']; // Store user email
+            
+            // Redirect to the dashboard or protected area
+            header("Location: pro.php");
+            exit();
+        } else {
+            // Invalid password error message
+            $error_message = "Invalid password.";
+        }
+    } else {
+        // No user found error message
+        $error_message = "No user found with that email.";
+    }
 }
 ?>
+
